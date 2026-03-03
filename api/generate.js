@@ -1,6 +1,12 @@
+export const config = {
+  runtime: 'nodejs',
+};
+
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 export default async function handler(req, res) {
+  console.log("Request received", req.method);
+  
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -12,7 +18,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Método no permitido" });
   }
 
-  const { content } = req.body;
+  const { content } = req.body || {};
+
   if (!content || content.trim().length < 10) {
     return res.status(400).json({
       error: "El contenido de investigación es muy corto o está vacío.",
@@ -92,6 +99,7 @@ FONDOS OSCUROS SUGERIDOS (usa variaciones únicas por variación):
 
   try {
     const apiKey = process.env.GEMINI_API_KEY;
+    console.log("API Key exists:", !!apiKey);
     
     if (!apiKey) {
       return res.status(500).json({ error: "GEMINI_API_KEY no configurada en el servidor" });
@@ -137,6 +145,7 @@ FONDOS OSCUROS SUGERIDOS (usa variaciones únicas por variación):
 
     return res.status(200).json({ variations });
   } catch (err) {
+    console.error("Error:", err);
     const message = err?.message || "Error desconocido";
     const status = message.includes("API_KEY") ? 401 : 502;
     return res.status(status).json({ error: `Error de Gemini: ${message}` });
