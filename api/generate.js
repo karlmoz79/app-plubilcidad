@@ -91,7 +91,13 @@ FONDOS OSCUROS SUGERIDOS (usa variaciones únicas por variación):
   };
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({ error: "GEMINI_API_KEY no configurada en el servidor" });
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
