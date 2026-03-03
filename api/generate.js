@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI, SchemaType } = require("@google/generative-ai");
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
