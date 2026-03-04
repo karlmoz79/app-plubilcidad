@@ -62,7 +62,27 @@ REGLAS CRÍTICAS:
 
 Responde SOLO con JSON: {"variations":[{"category":"...","badge":"...","headlineStart":"...","headlineHighlight":"...","subtext":"...","boldPhrases":["..."],"bg":"#...","accent":"#..."}]}`;
 
-    try {
+    // Función para limpiar JSON de bloques markdown y caracteres extra
+    const cleanJsonText = (text) => {
+        let cleaned = text.trim();
+        // Eliminar bloques de código markdown: ```json ... ``` o ``` ... ```
+        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?\s*```$/i, "");
+        // Eliminar BOM y caracteres invisibles al inicio
+        cleaned = cleaned.replace(/^\uFEFF/, "").trim();
+        return cleaned;
+    };
+
+    // Función para extraer el texto de la respuesta de Gemini
+    const extractText = (data) => {
+        try {
+            return data.candidates[0].content.parts[0].text;
+        } catch {
+            return null;
+        }
+    };
+
+    // Función para hacer la llamada a Gemini
+    const callGemini = async (temperature) => {
         const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
 
         const res = await fetch(apiUrl, {
@@ -73,7 +93,7 @@ Responde SOLO con JSON: {"variations":[{"category":"...","badge":"...","headline
                 contents: [{ parts: [{ text: "Contenido de investigación de mercado:\n\n" + content }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    temperature: 1.0,
+                    temperature,
                     maxOutputTokens: 4096,
                 },
             }),
@@ -82,10 +102,16 @@ Responde SOLO con JSON: {"variations":[{"category":"...","badge":"...","headline
         const data = await res.json();
 
         if (!res.ok) {
-            return response.status(502).json({ error: data.error?.message || "Error de Gemini API" });
+            throw new Error(data.error?.message || "Error de Gemini API");
         }
 
-        const raw = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+        return data;
+    };
+
+    try {
+        // Primer intento con temperatura 1.0 (más creativo)
+        let data = await callGemini(1.0);
+        let raw = extractText(data);
 
         if (!raw) {
             return response.status(500).json({ error: "No se recibió respuesta de Gemini" });
@@ -93,9 +119,27 @@ Responde SOLO con JSON: {"variations":[{"category":"...","badge":"...","headline
 
         let parsed;
         try {
-            parsed = JSON.parse(raw);
-        } catch (e) {
-            return response.status(500).json({ error: "Gemini devolvió JSON inválido." });
+            const cleaned = cleanJsonText(raw);
+            parsed = JSON.parse(cleaned);
+        } catch {
+            // Retry: segundo intento con temperatura más baja para forzar JSON limpio
+            console.log("[generate] JSON inválido en primer intento, reintentando con temp=0.7...");
+            try {
+                data = await callGemini(0.7);
+                raw = extractText(data);
+                if (raw) {
+                    const cleaned = cleanJsonText(raw);
+                    parsed = JSON.parse(cleaned);
+                }
+            } catch {
+                return response.status(500).json({
+                    error: "Gemini devolvió JSON inválido tras 2 intentos. Intenta de nuevo.",
+                });
+            }
+        }
+
+        if (!parsed) {
+            return response.status(500).json({ error: "No se pudo interpretar la respuesta de Gemini." });
         }
 
         const variations = Array.isArray(parsed) ? parsed : (parsed.variations || []);

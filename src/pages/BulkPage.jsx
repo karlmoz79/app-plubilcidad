@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toPng } from "html-to-image";
 import JSZip from "jszip";
@@ -17,31 +17,63 @@ export default function BulkPage() {
   const [variations] = useState(loadVariations);
   const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
-  const canvasRefs = useRef([]);
 
-  useEffect(() => {
-    canvasRefs.current = [];
+  // Refs dedicados para exportación — se asignan en el bloque oculto
+  const exportRefs = useRef({});
+
+  // Callback ref estable para el bloque oculto de exportación
+  const setExportRef = useCallback((index) => (el) => {
+    if (el) {
+      exportRefs.current[index] = el;
+    }
   }, []);
 
   const handleDownloadZip = async () => {
     setExporting(true);
-    const zip = new JSZip();
-    for (let i = 0; i < variations.length; i++) {
-      if (!canvasRefs.current[i]) continue;
-      try {
-        const dataUrl = await toPng(canvasRefs.current[i], { pixelRatio: 1 });
-        const base64 = dataUrl.split(",")[1];
-        const { category } = variations[i];
-        zip.file(`${category}_${String(i + 1).padStart(2, "0")}.png`, base64, {
-          base64: true,
-        });
-      } catch (err) {
-        console.error(`Error exporting variation ${i}:`, err);
+    try {
+      const zip = new JSZip();
+      let exportedCount = 0;
+
+      for (let i = 0; i < variations.length; i++) {
+        const node = exportRefs.current[i];
+        if (!node) {
+          console.warn(`[BulkPage] Ref no encontrado para variación ${i}`);
+          continue;
+        }
+        try {
+          const dataUrl = await toPng(node, {
+            width: 1080,
+            height: 1080,
+            pixelRatio: 1,
+            cacheBust: true,
+          });
+          const base64 = dataUrl.split(",")[1];
+          const { category } = variations[i];
+          zip.file(
+            `${category}_${String(i + 1).padStart(2, "0")}.png`,
+            base64,
+            { base64: true }
+          );
+          exportedCount++;
+        } catch (err) {
+          console.error(`Error exporting variation ${i}:`, err);
+        }
       }
+
+      if (exportedCount === 0) {
+        alert("No se pudieron exportar las variaciones. Intenta recargar la página.");
+        setExporting(false);
+        return;
+      }
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      saveAs(blob, `anuncios_${Date.now()}.zip`);
+    } catch (err) {
+      console.error("[BulkPage] Error generando ZIP:", err);
+      alert("Ocurrió un error al generar el ZIP.");
+    } finally {
+      setExporting(false);
     }
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, `anuncios_${Date.now()}.zip`);
-    setExporting(false);
   };
 
   const handleClear = () => {
@@ -119,7 +151,9 @@ export default function BulkPage() {
   const grouped = Object.fromEntries(
     Object.keys(CATEGORIES).map((cat) => [
       cat,
-      variations.filter((v) => v.category === cat),
+      variations
+        .map((v, i) => ({ ...v, _index: i }))
+        .filter((v) => v.category === cat),
     ])
   );
 
@@ -214,7 +248,7 @@ export default function BulkPage() {
         </div>
       </div>
 
-      {/* ─── Variations Grid ─── */}
+      {/* ─── Variations Grid (visualización) ─── */}
       {Object.entries(CATEGORIES).map(([key, label]) => {
         const items = grouped[key] || [];
         if (items.length === 0) return null;
@@ -226,72 +260,74 @@ export default function BulkPage() {
               <div className="section-heading__line" />
             </div>
             <div className="cards-grid">
-              {items.map((variation) => {
-                const globalIdx = variations.indexOf(variation);
-                return (
-                  <div
-                    key={globalIdx}
-                    className="ad-card"
-                    style={{ padding: 0, cursor: "default" }}
-                  >
-                    <div
-                      style={{
-                        width: "100%",
-                        aspectRatio: "1",
-                        overflow: "hidden",
-                        borderRadius: "var(--radius-md, 12px)",
-                      }}
-                    >
-                      <AdCanvas
-                        {...variation}
-                        ref={(el) => (canvasRefs.current[globalIdx] = el)}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        padding: "10px 12px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          color: "var(--text-secondary)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                        }}
-                      >
-                        {variation.category}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          color: "var(--text-muted)",
-                          fontWeight: 500,
-                        }}
-                      >
-                        #{String(globalIdx + 1).padStart(2, "0")}
-                      </span>
+              {items.map((variation) => (
+                <div
+                  key={variation._index}
+                  className="ad-card"
+                  style={{ padding: 0, cursor: "default" }}
+                >
+                  <div className="ad-card__preview">
+                    <div className="ad-card__preview-inner">
+                      <AdCanvas {...variation} />
                     </div>
                   </div>
-                );
-              })}
+                  <div
+                    style={{
+                      padding: "10px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "var(--text-secondary)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      {variation.category}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        color: "var(--text-muted)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      #{String(variation._index + 1).padStart(2, "0")}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         );
       })}
 
-      {/* ─── Hidden canvases for export ─── */}
-      <div style={{ position: "absolute", left: -9999, top: 0 }}>
+      {/* ─── Canvas ocultos para exportación PNG (tamaño real 1080×1080) ─── */}
+      <div
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: 0,
+          width: "1080px",
+          pointerEvents: "none",
+          opacity: 0,
+        }}
+        aria-hidden="true"
+      >
         {variations.map((variation, i) => (
-          <div key={i} ref={(el) => (canvasRefs.current[i] = el)}>
-            <AdCanvas {...variation} />
-          </div>
+          <AdCanvas
+            key={i}
+            {...variation}
+            ref={setExportRef(i)}
+          />
         ))}
       </div>
     </div>
   );
 }
+
