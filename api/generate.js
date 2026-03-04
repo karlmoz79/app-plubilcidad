@@ -1,25 +1,35 @@
+// Vercel Serverless Function — Generador de variaciones de anuncios
+// Usa Gemini REST API directamente (sin SDK)
+
 export const config = {
     maxDuration: 60,
 };
 
-export default async function handler(req, res) {
-    // CORS headers para todas las respuestas
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+export default async function handler(request, response) {
+    // CORS headers
+    response.setHeader("Access-Control-Allow-Origin", "*");
+    response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
+    if (request.method === "OPTIONS") {
+        return response.status(200).end();
     }
 
-    if (req.method !== "POST") {
-        return res.status(405).json({ error: "Método no permitido" });
+    if (request.method !== "POST") {
+        return response.status(405).json({ error: "Método no permitido" });
     }
 
-    const { content } = req.body || {};
+    let body;
+    try {
+        body = request.body;
+    } catch {
+        return response.status(400).json({ error: "Body inválido" });
+    }
+
+    const content = body?.content || "";
 
     if (!content || content.trim().length < 10) {
-        return res.status(400).json({
+        return response.status(400).json({
             error: "El contenido de investigación es muy corto o está vacío.",
         });
     }
@@ -27,12 +37,10 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-        return res.status(500).json({ error: "GEMINI_API_KEY no configurada" });
+        return response.status(500).json({ error: "GEMINI_API_KEY no configurada en Vercel" });
     }
 
-    // ── System Prompt ──────────────────────────────────────────────────────────
-    const systemPrompt = `
-Eres un experto en copywriting de alto impacto para publicidad en redes sociales hispanohablantes.
+    const systemPrompt = `Eres un experto en copywriting de alto impacto para publicidad en redes sociales hispanohablantes.
 
 TAREA: Genera exactamente 12 variaciones de anuncios.
 Distribuidas así: 3 "pain", 3 "outcome", 3 "social", 3 "challenge"
@@ -43,96 +51,61 @@ DEFINICIONES:
 - "social": Usa números, estadísticas, testimonios implícitos o señales de autoridad.
 - "challenge": Reta directamente al lector. Provoca, incomoda, desafía su status quo.
 
-REGLAS CRÍTICAS (incumplir cualquiera invalida el output):
-1. Usa el vocabulario EXACTO de la investigación. No limpies ni profesionalices el lenguaje. Mantenlo crudo y casual.
-2. Cada una de las 12 variaciones debe sentirse completamente diferente de las otras 11.
-3. Los titulares deben ser cortos (máximo 6 palabras por parte) y provocativos. Sin titulares genéricos.
-4. Cada variación DEBE tener un color de acento DIFERENTE. No repitas colores. Usa valores hex de colores vibrantes.
-5. Cada variación DEBE tener un fondo oscuro ligeramente diferente (variaciones sutiles del negro/azul oscuro).
+REGLAS CRÍTICAS:
+1. Usa el vocabulario EXACTO de la investigación.
+2. Cada variación debe sentirse completamente diferente.
+3. Titulares cortos (máximo 6 palabras) y provocativos.
+4. Cada variación DEBE tener un color de acento DIFERENTE (hex vibrante).
+5. Cada variación DEBE tener un fondo oscuro ligeramente diferente.
 6. NUNCA uses el mismo emoji en dos badges.
-7. Las boldPhrases deben ser exactamente palabras o frases que aparecen en el subtext.
+7. Las boldPhrases deben ser palabras que aparecen en el subtext.
 
-COLORES SUGERIDOS PARA ACENTOS (usa variaciones y no repitas):
-Rojo/Naranja: #ef4444, #f97316, #fb923c
-Amarillo:     #eab308, #f59e0b, #fbbf24
-Verde:        #22c55e, #10b981, #4ade80
-Azul/Morado:  #6366f1, #8b5cf6, #a855f7, #3b82f6, #06b6d4
-Rosa:         #ec4899, #f43f5e
+Responde SOLO con JSON: {"variations":[{"category":"...","badge":"...","headlineStart":"...","headlineHighlight":"...","subtext":"...","boldPhrases":["..."],"bg":"#...","accent":"#..."}]}`;
 
-FONDOS OSCUROS SUGERIDOS (usa variaciones únicas por variación):
-#0a0a0f, #0f0a0a, #0a0f0a, #0a0a14, #0f0f0a, #0a1014, #10080a, #080a10, #0d0a10, #0a0d10
-
-Responde SOLO con un JSON válido con la estructura:
-{"variations":[{"category":"...","badge":"...","headlineStart":"...","headlineHighlight":"...","subtext":"...","boldPhrases":["..."],"bg":"#...","accent":"#..."}]}
-`;
-
-    // ── Llamada a Gemini REST API (sin dependencia de SDK) ─────────────────────
     try {
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    contents: [
-                        {
-                            parts: [
-                                {
-                                    text: `Contenido de investigación de mercado:\n\n${content}`,
-                                },
-                            ],
-                        },
-                    ],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        temperature: 1.0,
-                        maxOutputTokens: 4096,
-                    },
-                }),
-            }
-        );
+        const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
 
-        const data = await response.json();
+        const res = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                contents: [{ parts: [{ text: "Contenido de investigación de mercado:\n\n" + content }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 1.0,
+                    maxOutputTokens: 4096,
+                },
+            }),
+        });
 
-        if (!response.ok) {
-            return res
-                .status(502)
-                .json({ error: data.error?.message || "Error de Gemini API" });
+        const data = await res.json();
+
+        if (!res.ok) {
+            return response.status(502).json({ error: data.error?.message || "Error de Gemini API" });
         }
 
-        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const raw = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
 
         if (!raw) {
-            return res
-                .status(500)
-                .json({ error: "No se recibió respuesta de Gemini" });
+            return response.status(500).json({ error: "No se recibió respuesta de Gemini" });
         }
 
-        // ── Parseo y normalización ──────────────────────────────────────────────
         let parsed;
         try {
             parsed = JSON.parse(raw);
-        } catch {
-            return res
-                .status(500)
-                .json({ error: "Gemini devolvió un formato JSON inválido." });
+        } catch (e) {
+            return response.status(500).json({ error: "Gemini devolvió JSON inválido." });
         }
 
-        const variations = Array.isArray(parsed)
-            ? parsed
-            : parsed.variations || parsed[Object.keys(parsed)[0]] || [];
+        const variations = Array.isArray(parsed) ? parsed : (parsed.variations || []);
 
         if (!Array.isArray(variations) || variations.length === 0) {
-            return res
-                .status(500)
-                .json({ error: "No se generaron variaciones válidas." });
+            return response.status(500).json({ error: "No se generaron variaciones válidas." });
         }
 
-        return res.status(200).json({ variations });
+        return response.status(200).json({ variations });
     } catch (err) {
-        const message = err?.message || "Error desconocido";
-        const status = message.includes("API_KEY") ? 401 : 502;
-        return res.status(status).json({ error: `Error de Gemini: ${message}` });
+        return response.status(502).json({ error: "Error de Gemini: " + (err.message || "desconocido") });
     }
 }
