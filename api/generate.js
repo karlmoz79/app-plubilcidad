@@ -63,7 +63,7 @@ REGLAS CRÍTICAS:
 Responde SOLO con JSON: {"variations":[{"category":"...","badge":"...","headlineStart":"...","headlineHighlight":"...","subtext":"...","boldPhrases":["..."],"bg":"#...","accent":"#..."}]}`;
 
     try {
-        const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
+        const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=" + apiKey;
 
         const res = await fetch(apiUrl, {
             method: "POST",
