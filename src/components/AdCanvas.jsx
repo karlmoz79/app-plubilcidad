@@ -41,9 +41,22 @@ const AdCanvas = forwardRef(
         </div>
         <p className="ad-subtext" dangerouslySetInnerHTML={renderSubtext()} />
         <div className="ad-footer">
-          <div className="ad-mockup">Mockup</div>
+          <div className="ad-mockup">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </div>
           <div className="ad-logo">
-            <div>🎯 AdGen</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "flex-end" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              AdGen
+            </div>
             <div style={{ fontSize: 16, opacity: 0.6 }}>adgen.app</div>
           </div>
         </div>

@@ -1,68 +1,90 @@
+import { useRef, useState, useEffect } from "react";
 import AdCanvas from "./AdCanvas";
 
-export default function AdCard({ variation, selected, onToggle, scale = 0.2 }) {
+const CATEGORY_COLORS = {
+  pain: { bg: "rgba(239, 68, 68, 0.12)", text: "#f87171", border: "rgba(239, 68, 68, 0.25)" },
+  outcome: { bg: "rgba(34, 197, 94, 0.12)", text: "#4ade80", border: "rgba(34, 197, 94, 0.25)" },
+  social: { bg: "rgba(59, 130, 246, 0.12)", text: "#60a5fa", border: "rgba(59, 130, 246, 0.25)" },
+  challenge: { bg: "rgba(249, 115, 22, 0.12)", text: "#fb923c", border: "rgba(249, 115, 22, 0.25)" },
+};
+
+const CATEGORY_LABELS = {
+  pain: "Dolor",
+  outcome: "Resultado",
+  social: "Social",
+  challenge: "Desafío",
+};
+
+export default function AdCard({ variation, selected, onToggle }) {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(0.3);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        setScale(w / 1080);
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const cardClasses = ["ad-card", selected && "ad-card--selected"]
+    .filter(Boolean)
+    .join(" ");
+
+  const cat = CATEGORY_COLORS[variation.category] || CATEGORY_COLORS.pain;
+  const catLabel = CATEGORY_LABELS[variation.category] || variation.category;
+
   return (
-    <div
-      onClick={onToggle}
-      style={{
-        border: selected
-          ? "2px solid var(--border-selected)"
-          : "1px solid var(--border)",
-        background: selected ? "var(--bg-selected)" : "var(--bg-card)",
-        borderRadius: "12px",
-        padding: "12px",
-        cursor: "pointer",
-        transition: "all 0.15s",
-        userSelect: "none",
-      }}
-    >
-      <div
-        style={{
-          width: 1080 * scale,
-          height: 1080 * scale,
-          overflow: "hidden",
-          borderRadius: "8px",
-          marginBottom: "10px",
-        }}
-      >
+    <div className={cardClasses} onClick={onToggle}>
+      {/* ─── Full-width preview ─── */}
+      <div className="ad-card__preview" ref={containerRef}>
         <div
+          className="ad-card__preview-inner"
           style={{
             transform: `scale(${scale})`,
-            transformOrigin: "top left",
-            width: 1080,
-            height: 1080,
           }}
         >
           <AdCanvas {...variation} />
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggle}
-          onClick={(e) => e.stopPropagation()}
-        />
-        <span
-          style={{
-            fontSize: 12,
-            color: "var(--text-secondary)",
-            textTransform: "capitalize",
-          }}
-        >
-          {variation.category}
-        </span>
+      {/* ─── Card info bar ─── */}
+      <div className="ad-card__info">
+        <div className="ad-card__info-left">
+          <input
+            type="checkbox"
+            className="ad-card__checkbox"
+            checked={selected}
+            onChange={onToggle}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Seleccionar variación ${variation.category}`}
+          />
+          <span
+            className="ad-card__badge"
+            style={{
+              background: cat.bg,
+              color: cat.text,
+              borderColor: cat.border,
+            }}
+          >
+            {catLabel}
+          </span>
+        </div>
       </div>
-      <p
-        style={{
-          fontSize: 11,
-          color: "var(--text-muted)",
-          marginTop: 4,
-          lineHeight: 1.3,
-        }}
-      >
-        {variation.headlineStart} {variation.headlineHighlight}
+
+      {/* ─── Headline truncated ─── */}
+      <p className="ad-card__headline">
+        {variation.headlineStart}{" "}
+        <span style={{ color: variation.accent || "var(--accent)" }}>
+          {variation.headlineHighlight}
+        </span>
       </p>
     </div>
   );
