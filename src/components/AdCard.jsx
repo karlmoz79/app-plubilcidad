@@ -23,13 +23,15 @@ export default function AdCard({ variation, selected, onToggle, readOnly = false
     const el = containerRef.current;
     if (!el) return;
 
-    // Usar requestAnimationFrame para evitar errores de ResizeObserver loop limit exceeded
     const observer = new ResizeObserver((entries) => {
       window.requestAnimationFrame(() => {
         if (!Array.isArray(entries) || !entries.length) return;
         const w = entries[0].contentRect.width;
         if (w > 0) {
           setScale(w / 1080);
+          // Force square height via JS — CSS aspect-ratio and
+          // padding-bottom hacks break in Firefox flex contexts
+          el.style.height = w + "px";
         }
       });
     });

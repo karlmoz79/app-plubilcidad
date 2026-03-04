@@ -16,14 +16,25 @@ const AdCanvas = forwardRef(
   ) => {
     const renderSubtext = () => {
       let result = subtext || "";
+
+      // 1. Convert markdown **bold** syntax to <strong> tags
+      result = result.replace(
+        /\*\*(.+?)\*\*/g,
+        '<strong style="color:#f0f0f5">$1</strong>'
+      );
+
+      // 2. Also apply boldPhrases replacements (if any remain unhighlighted)
       boldPhrases.forEach((phrase) => {
         if (phrase) {
+          // Skip if already wrapped in <strong>
+          const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           result = result.replace(
-            new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+            new RegExp(`(?!<strong[^>]*>)${escaped}(?!</strong>)`, "gi"),
             `<strong style="color:#f0f0f5">${phrase}</strong>`,
           );
         }
       });
+
       return { __html: result };
     };
 
