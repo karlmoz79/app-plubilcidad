@@ -119,10 +119,8 @@
   user-select: none;
   animation: fadeInUp 450ms cubic-bezier(0.4, 0, 0.2, 1) both;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  /* Firefox flex-child fix */
+  /* Using block layout (not flex) — Firefox miscalculates
+     aspect-ratio on children inside flex-column containers */
 }
 
 .ad-card::before {
@@ -167,11 +165,13 @@
       transparent 50%);
 }
 
-/* ─── Card Preview (full-width, 1:1 ratio via JS) ─── */
+/* ─── Card Preview (full-width, 1:1 ratio via JS + CSS fallback) ─── */
 .ad-card__preview {
   width: 100%;
-  /* Height is set dynamically by ResizeObserver in AdCard.jsx
-     to guarantee a perfect square in all browsers (including Firefox) */
+  /* CSS fallback: ensures cards are visible even before JS runs.
+     ResizeObserver in AdCard.jsx overrides with exact pixel height. */
+  aspect-ratio: 1 / 1;
+  min-height: 200px;
   overflow: hidden;
   position: relative;
   background: #08080d;
