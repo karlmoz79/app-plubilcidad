@@ -174,7 +174,6 @@
   overflow: hidden;
   position: relative;
   background: #08080d;
-  container-type: inline-size;
 }
 
 .ad-card__preview-inner {
@@ -184,8 +183,17 @@
   width: 1080px;
   height: 1080px;
   transform-origin: top left;
-  /* Escala automática basada en el ancho del contenedor padre */
-  transform: scale(calc(100cqi / 1080));
+}
+
+.ad-card--readonly {
+  cursor: default;
+}
+.ad-card--readonly:hover {
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.08); /* keep original border */
+}
+.ad-card--readonly:hover::before {
+  opacity: 0;
 }
 
 .ad-card__preview::after {

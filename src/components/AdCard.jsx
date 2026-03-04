@@ -15,7 +15,7 @@ const CATEGORY_LABELS = {
   challenge: "Desafío",
 };
 
-export default function AdCard({ variation, selected, onToggle }) {
+export default function AdCard({ variation, selected, onToggle, readOnly = false }) {
   const containerRef = useRef(null);
   const [scale, setScale] = useState(0.3);
 
@@ -34,7 +34,7 @@ export default function AdCard({ variation, selected, onToggle }) {
     return () => observer.disconnect();
   }, []);
 
-  const cardClasses = ["ad-card", selected && "ad-card--selected"]
+  const cardClasses = ["ad-card", selected && "ad-card--selected", readOnly && "ad-card--readonly"]
     .filter(Boolean)
     .join(" ");
 
@@ -42,7 +42,7 @@ export default function AdCard({ variation, selected, onToggle }) {
   const catLabel = CATEGORY_LABELS[variation.category] || variation.category;
 
   return (
-    <div className={cardClasses} onClick={onToggle}>
+    <div className={cardClasses} onClick={!readOnly ? onToggle : undefined}>
       {/* ─── Full-width preview ─── */}
       <div className="ad-card__preview" ref={containerRef}>
         <div
@@ -58,14 +58,16 @@ export default function AdCard({ variation, selected, onToggle }) {
       {/* ─── Card info bar ─── */}
       <div className="ad-card__info">
         <div className="ad-card__info-left">
-          <input
-            type="checkbox"
-            className="ad-card__checkbox"
-            checked={selected}
-            onChange={onToggle}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Seleccionar variación ${variation.category}`}
-          />
+          {!readOnly && (
+            <input
+              type="checkbox"
+              className="ad-card__checkbox"
+              checked={selected}
+              onChange={onToggle}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Seleccionar variación ${variation.category}`}
+            />
+          )}
           <span
             className="ad-card__badge"
             style={{

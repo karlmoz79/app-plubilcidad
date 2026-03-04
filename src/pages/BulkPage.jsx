@@ -5,6 +5,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadVariations, clearVariations } from "../utils/storage";
 import AdCanvas from "../components/AdCanvas";
+import AdCard from "../components/AdCard";
 
 const CATEGORIES = {
   pain: "Dolor Primero",
@@ -261,46 +262,12 @@ export default function BulkPage() {
             </div>
             <div className="cards-grid">
               {items.map((variation) => (
-                <div
+                <AdCard
                   key={variation._index}
-                  className="ad-card"
-                  style={{ padding: 0, cursor: "default" }}
-                >
-                  <div className="ad-card__preview">
-                    <div className="ad-card__preview-inner">
-                      <AdCanvas {...variation} />
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: "var(--text-secondary)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      {variation.category}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        color: "var(--text-muted)",
-                        fontWeight: 500,
-                      }}
-                    >
-                      #{String(variation._index + 1).padStart(2, "0")}
-                    </span>
-                  </div>
-                </div>
+                  variation={variation}
+                  selected={false}
+                  readOnly={true}
+                />
               ))}
             </div>
           </div>
