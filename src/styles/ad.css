@@ -170,10 +170,11 @@
 /* ─── Card Preview (full-width, aspect-ratio based) ─── */
 .ad-card__preview {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  padding-bottom: 100%;
   overflow: hidden;
   position: relative;
   background: #08080d;
+  flex-shrink: 0;
 }
 
 .ad-card__preview-inner {
